@@ -90,13 +90,18 @@ def parse_top_container_info(aw_dict):
 def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id):
     #input: one dict from DICT_OF_DICTS, repo, resource
     #parse dict for info
-    new_ao['title'] = aw_dict['title']
+    new_ao = {}
+    new_ao['title'] = aw_dict['Title']
     new_ao['level'] = 'item'
     new_ao['resource'] = {"ref":"/repositories/"+repo_id+"/resources/"+resource_id}
     new_ao['dates'] = [{"expression": aw_dict['Date Created'],"date_type": "single", "label": "creation", "jsonmodel_type": "date"}]
     #post to Aspace AS CHILD OF RESOURCE
-    #return response ['id']
-    pass
+    new_ao_data = json.dumps(new_ao)
+    #post
+    new_ao_post = requests.post(baseURL+'/repositories/'+ repo_id +'/archival_objects', headers=HEADERS,data=new_ao_data).json()
+    print(new_ao_post)
+    return new_ao_post
+
 
 def add_records_to_series(series_kids, repo_id, resource_id): #make AOs children of others
     for key in list(series_kids.keys()):
@@ -144,9 +149,13 @@ if __name__=='__main__':
     # data = {}
     # data["all_ids"]="true"
     # resp = requests.get(baseURL + '/repositories/' + repo_id + '/archival_objects', headers=HEADERS, data = data)
-    # print(resp.text)
-    # ao_post = create_series_obj(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"])
-    # ao_post_id = ao_post['id']
-    # inp = input("Delete archival objects? type yes or no: ")
-    # if inp == 'yes':
-    #     delete_ao(ao_post_id, repo_id)
+    # print(resp.text
+    ids_to_del = []
+    ao_post_series= create_series_obj(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"])
+    ids_to_del.append(ao_post_series['id'])
+    ao_post = create_archival_object(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"], None, None, repo_id, resource_id)
+    ids_to_del.append(ao_post['id'])
+    inp = input("Delete archival objects? type yes or no: ")
+    if inp == 'yes':
+        for ao_post_id in ids_to_del:
+            delete_ao(ao_post_id, repo_id)
