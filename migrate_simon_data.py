@@ -64,11 +64,34 @@ def create_series_obj(aw_dict): #tested!
         # SERIES_DICTS[series_name]['id'] = new_ao_post['id']
         return new_ao_post
 
+def make_file_identifier(link):
+    split_link = link.split("/")
+    box_ind = split_link.index("simon") + 1
+    identifier = "Simon_" + "_".join(split_link[box_ind:]) + ".pdf"
+    return identifier
+
 def create_digital_object(aw_dict):
     #input: one dict for DICT_OF_DICTS
     #parse dict for info
-    #return do instance
-    pass
+    new_do = {}
+    new_do['title'] = aw_dict['Title']
+    new_do['jsonmodel_type'] = 'digital_object'
+    new_do['digital_object_id'] = make_file_identifier(aw_dict["Persistent Link"])
+    new_do['dates'] = [{"expression": aw_dict['Date Created'],"date_type": "single", "label": "creation", "jsonmodel_type": "date"}]
+    new_do['file_versions'] = [{ "jsonmodel_type":"file_version", 'file_uri': make_file_identifier(aw_dict["Persistent Link"]), "is_representative":False, "file_format_name":aw_dict['Type'], "publish":True}]
+    new_do_data = json.dumps(new_do)
+    #post to archivesspace, make ref url
+    new_do_post = requests.post(baseURL+'/repositories/'+ repo_id +'/digital_objects', headers=HEADERS,data=new_do_data).json()
+    print(new_do_post)
+    #make instance object
+    try:
+        dig_obj_uri = new_do_post['uri']
+    except:
+        print('Error!')
+        exit()
+    instance = {'instance_type':'digital_object', 'digital_object':{'ref':dig_obj_uri}}
+    #return instance
+    return instance
 
 def make_container_indicator(link):
     split_link = link.split("/")
@@ -87,7 +110,7 @@ def parse_top_container_info(aw_dict):
         #return TOP_CONTAINERS[indicator]
         pass
 
-def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id):
+def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id): #tested without instances
     #input: one dict from DICT_OF_DICTS, repo, resource
     #parse dict for info
     new_ao = {}
@@ -95,9 +118,12 @@ def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource
     new_ao['level'] = 'item'
     new_ao['resource'] = {"ref":"/repositories/"+repo_id+"/resources/"+resource_id}
     new_ao['dates'] = [{"expression": aw_dict['Date Created'],"date_type": "single", "label": "creation", "jsonmodel_type": "date"}]
+    new_ao['instances'] = []
+    new_ao['instances'].append(do_instance)
     #post to Aspace AS CHILD OF RESOURCE
     new_ao_data = json.dumps(new_ao)
     #post
+    print(new_ao_data)
     new_ao_post = requests.post(baseURL+'/repositories/'+ repo_id +'/archival_objects', headers=HEADERS,data=new_ao_data).json()
     print(new_ao_post)
     return new_ao_post
@@ -142,6 +168,10 @@ def delete_ao(ao_id, repo_id):
     delete = requests.delete(baseURL + '/repositories/' + repo_id + '/archival_objects/' + str(ao_id), headers=HEADERS)
     print(delete.text) #tested!
 
+def delete_do(do_id, repo_id):
+    delete = requests.delete(baseURL + '/repositories/' + repo_id + '/digital_objects/' + str(do_id), headers=HEADERS)
+    print(delete.text)
+
 if __name__=='__main__':
     DICT_OF_DICTS = parse_simon_data(FNAME)
     SERIES_DICTS = {}
@@ -149,13 +179,20 @@ if __name__=='__main__':
     # data = {}
     # data["all_ids"]="true"
     # resp = requests.get(baseURL + '/repositories/' + repo_id + '/archival_objects', headers=HEADERS, data = data)
-    # print(resp.text
-    ids_to_del = []
-    ao_post_series= create_series_obj(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"])
-    ids_to_del.append(ao_post_series['id'])
-    ao_post = create_archival_object(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"], None, None, repo_id, resource_id)
-    ids_to_del.append(ao_post['id'])
-    inp = input("Delete archival objects? type yes or no: ")
+    # print(resp.text)
+    aw_dict = DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"]
+    aos_to_del = []
+    dos_to_del = []
+    do = create_digital_object(aw_dict)
+    dos_to_del.append(do)
+    # print(do)
+    # ao_post_series= create_series_obj(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"])
+    # aos_to_del.append(ao_post_series['id'])
+    ao_post = create_archival_object(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"], None, do, repo_id, resource_id)
+    aos_to_del.append(ao_post['id'])
+    inp = input("Delete objects? type yes or no: ")
     if inp == 'yes':
-        for ao_post_id in ids_to_del:
+        for ao_post_id in aos_to_del:
             delete_ao(ao_post_id, repo_id)
+        for do_post in dos_to_del:
+            delete_do(do_post['id'], repo_id)
