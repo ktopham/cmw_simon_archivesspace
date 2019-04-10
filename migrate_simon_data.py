@@ -37,7 +37,7 @@ def parse_simon_data(fname):
     with open(fname) as cache:
         cache_dict = json.loads(cache.read())
     test = cache_dict["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"]
-    print(test)
+    # print(test)
     print("Cache load successful.")
 
     return cache_dict #tested!
@@ -129,7 +129,7 @@ def create_top_container(aw_dict):
         #add that data to TOP_CONTAINERS
         TOP_CONTAINERS[indicator] = instance
         #return instance
-        print(instance)
+        # print(instance)
         return instance
 
 def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id): #tested with instances!
@@ -152,21 +152,6 @@ def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource
     new_ao_post = requests.post(baseURL+'/repositories/'+ repo_id +'/archival_objects', headers=HEADERS,data=new_ao_data).json()
     print(new_ao_post)
     return new_ao_post
-
-def add_records_to_series(series_kids, repo_id, resource_id): #make AOs children of others
-    #
-    for key in list(series_kids.keys()):
-        kid_list = series_kids[key]
-        kids_dict = {'children':[]}
-        kids_dict['position'] = 1
-        for kid in kid_list:
-            kid_obj = {}
-            kid_obj['ref_id']= '/repositories/'+ repo_id +'/archival_objects/' + kid
-            kids_dict['children'].append(kid_obj)
-        kids_json = json.dumps(kids_dict)
-        ao_post = requests.post(baseURL+'/repositories/' + repo_id + '/archival_objects/' + key + '/accept_children',headers=HEADERS,data=kids_json)
-        print('Added children to AO! ', ao_post.text)
-
 
 def whole_thang(DICT_OF_DICTS, repo_id, resource_id):
     #input: repo_id, resource_id
@@ -220,11 +205,11 @@ def delete_all_stuff():
 
 if __name__=='__main__':
     DICT_OF_DICTS = parse_simon_data(FNAME)
-    # delete_all_stuff()
+    delete_all_stuff()
     SERIES_DICTS = {}
     TOP_CONTAINERS = {}
     inp = input("add data? ")
-    if inp == 'no':
-        exit()
-    else:
+    if inp == 'yes' or inp == 'y':
         but_kitchen_sink = whole_thang(DICT_OF_DICTS, repo_id, resource_id)
+    else:
+        exit()
