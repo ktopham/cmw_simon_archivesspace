@@ -47,7 +47,7 @@ def create_series_obj(aw_dict): #tested!
     #input: one dictionary from DICT_OF_DICTS
     series_name = aw_dict["Series"]
     if series_name in SERIES_DICTS.keys():
-        return SERIES_DICTS[series_name]['id']
+        return SERIES_DICTS[series_name]['ref_id']
     else:
         #create ao record
         new_ao = {}
@@ -61,8 +61,8 @@ def create_series_obj(aw_dict): #tested!
         print(new_ao_post)
         #add that data to SERIES_DICTS
         SERIES_DICTS[series_name] = {}
-        SERIES_DICTS[series_name]['id'] = new_ao_post['id']
-        return new_ao_post
+        SERIES_DICTS[series_name]['ref_id'] = new_ao_post['uri']
+        return SERIES_DICTS[series_name]['ref_id']
 
 def make_file_identifier(link):
     split_link = link.split("/")
@@ -87,12 +87,13 @@ def create_digital_object(aw_dict): #tested!
     #make instance object
     try:
         dig_obj_uri = new_do_post['uri']
+        instance = {'instance_type':'digital_object', 'digital_object':{'ref': '/repositories/'+ repo_id + '/digital_objects/' + dig_obj_uri}}
+        #return instance
+        return instance
     except:
         print('Error!')
         exit()
-    instance = {'instance_type':'digital_object', 'digital_object':{'ref':dig_obj_uri}}
-    #return instance
-    return instance
+
 
 def make_container_indicator(link):
     split_link = link.split("/")
@@ -143,8 +144,9 @@ def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource
     if 'Date Created' in list(aw_dict.keys()):
         new_ao['dates'] = [{"expression": aw_dict['Date Created'],"date_type": "single", "label": "creation", "jsonmodel_type": "date"}]
     new_ao['instances'] = []
-    # new_ao['instances'].append(do_instance)
+    new_ao['instances'].append(do_instance)
     new_ao['instances'].append(box_instance)
+    new_ao['parent'] ={"ref":aw_dict['series_id']}
     #post to Aspace AS CHILD OF RESOURCE
     new_ao_data = json.dumps(new_ao)
     #post
@@ -155,15 +157,17 @@ def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource
 
 
 def add_records_to_series(series_kids, repo_id, resource_id): #make AOs children of others
+    #
     for key in list(series_kids.keys()):
         kid_list = series_kids[key]
         kids_dict = {'children':[]}
+        kids_dict['position'] = 1
         for kid in kid_list:
             kid_obj = {}
-            kid_obj['ref_id']= kid
+            kid_obj['ref_id']= '/repositories/'+ repo_id +'/archival_objects/' + kid
             kids_dict['children'].append(kid_obj)
         kids_json = json.dumps(kids_dict)
-        ao_post = requests.post(baseURL+'/repositories/' + repo_id + '/archival_objects/' + key + '/children',headers=HEADERS,data=kids_json)
+        ao_post = requests.post(baseURL+'/repositories/' + repo_id + '/archival_objects/' + key + '/accept_children',headers=HEADERS,data=kids_json)
         print('Added children to AO! ', ao_post.text)
 
 
@@ -175,20 +179,20 @@ def whole_thang(DICT_OF_DICTS, repo_id, resource_id):
     for aw_dict in DICT_OF_DICTS:
         aw_dict = DICT_OF_DICTS[aw_dict]
         #create AO series
-        series_id = create_series_obj(aw_dict) #create series level AOs
+        series_ref = create_series_obj(aw_dict) #create series level AOs
         series_name = aw_dict["Series"]
-        aw_dict['series_id'] = series_id #add series AO ref_id to the AW dictionary for later
+        aw_dict['series_id'] = series_ref #add series AO ref_id to the AW dictionary for later
         #create DO individual record
         do_instance = create_digital_object(aw_dict)
         #create box instance
         box_instance = create_top_container(aw_dict)
         #create AO record and post
         new_ao_id = create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id)
-        if series_name in list(series_kids.keys()):
-            series_kids[series_name].append(new_ao_id)
-        else:
-            series_kids[series_name] = [new_ao_id]
-    add_records_to_series(series_kids, repo_id, resource_id)
+    #     if series_name in list(series_kids.keys()):
+    #         series_kids[series_name].append(new_ao_id)
+    #     else:
+    #         series_kids[series_name] = [new_ao_id]
+    # add_records_to_series(series_kids, repo_id, resource_id)
 
 
 def delete_ao(ao_id, repo_id):
