@@ -42,7 +42,6 @@ def parse_simon_data(fname):
 
     return cache_dict #tested!
 
-
 def create_series_obj(aw_dict): #tested!
     #input: one dictionary from DICT_OF_DICTS
     series_name = aw_dict["Series"]
@@ -93,7 +92,6 @@ def create_digital_object(aw_dict): #tested!
     except:
         print('Error!')
         exit()
-
 
 def make_container_indicator(link):
     split_link = link.split("/")
@@ -155,7 +153,6 @@ def create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource
     print(new_ao_post)
     return new_ao_post
 
-
 def add_records_to_series(series_kids, repo_id, resource_id): #make AOs children of others
     #
     for key in list(series_kids.keys()):
@@ -188,12 +185,6 @@ def whole_thang(DICT_OF_DICTS, repo_id, resource_id):
         box_instance = create_top_container(aw_dict)
         #create AO record and post
         new_ao_id = create_archival_object(aw_dict, box_instance, do_instance, repo_id, resource_id)
-    #     if series_name in list(series_kids.keys()):
-    #         series_kids[series_name].append(new_ao_id)
-    #     else:
-    #         series_kids[series_name] = [new_ao_id]
-    # add_records_to_series(series_kids, repo_id, resource_id)
-
 
 def delete_ao(ao_id, repo_id):
     delete = requests.delete(baseURL + '/repositories/' + repo_id + '/archival_objects/' + str(ao_id), headers=HEADERS)
@@ -227,10 +218,9 @@ def delete_all_stuff():
             print(endpoint)
             delete_stuff(endpoint, repo_id)
 
-
 if __name__=='__main__':
     DICT_OF_DICTS = parse_simon_data(FNAME)
-    delete_all_stuff()
+    # delete_all_stuff()
     SERIES_DICTS = {}
     TOP_CONTAINERS = {}
     inp = input("add data? ")
@@ -238,18 +228,3 @@ if __name__=='__main__':
         exit()
     else:
         but_kitchen_sink = whole_thang(DICT_OF_DICTS, repo_id, resource_id)
-    # data = {}
-    # data["all_ids"]="true"
-    # resp = requests.get(baseURL + '/repositories/' + repo_id + '/archival_objects', headers=HEADERS, data = data)
-    # print(resp.text)
-    # aw_dict = DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"]
-    # # do = create_digital_object(aw_dict)
-    # # print(do)
-    # # try:
-    # #     dos_to_del.append(do['digital_object']['ref'])
-    # # except:
-    # #     print("error")
-    # # ao_post_series= create_series_obj(DICT_OF_DICTS["http://doi.library.cmu.edu/10.1184/pmc/simon/box00017/fld01179/bdl0002/doc0001"])
-    # # aos_to_del.append(ao_post_series['id'])
-    # con_post = create_top_container(aw_dict)
-    # ao_post = create_archival_object(aw_dict, con_post, None, repo_id, resource_id)
